@@ -1,10 +1,13 @@
+# crm/schema.py
 import graphene
 from graphene_django import DjangoObjectType
 from graphene_django.filter import DjangoFilterConnectionField
+from django.core.exceptions import ValidationError
+from django.utils import timezone
+
 from crm.models import Customer, Product, Order
 from crm.filters import CustomerFilter, ProductFilter, OrderFilter
-from .models import Customer, Product, Order
-from django.core.exceptions import ValidationError
+
 class CustomerType(DjangoObjectType):
     class Meta:
         model = Customer
@@ -25,6 +28,12 @@ class OrderType(DjangoObjectType):
         filterset_class = OrderFilter
         interfaces = (graphene.relay.Node,)
         fields = "__all__"
+
+class CustomerInput(graphene.InputObjectType):
+    name = graphene.String(required=True)
+    email = graphene.String(required=True)
+    phone = graphene.String()
+
 class CreateCustomer(graphene.Mutation):
     class Arguments:
         name = graphene.String(required=True)
@@ -40,9 +49,10 @@ class CreateCustomer(graphene.Mutation):
         customer = Customer(name=name, email=email, phone=phone)
         customer.save()
         return CreateCustomer(customer=customer, message="Customer created successfully.")
+
 class BulkCreateCustomers(graphene.Mutation):
     class Arguments:
-        customers = graphene.List(lambda: CustomerInput)
+        customers = graphene.List(CustomerInput)
 
     created_customers = graphene.List(CustomerType)
     errors = graphene.List(graphene.String)
@@ -139,3 +149,43 @@ class Query(graphene.ObjectType):
         if order_by:
             qs = qs.order_by(*order_by)
         return qs
+
+
+
+
+# Product type for GraphQL
+class ProductType(DjangoObjectType):
+    class Meta:
+        model = Product
+        fields = ("id", "name", "stock")
+
+class UpdateLowStockProducts(graphene.Mutation):
+    success = graphene.Boolean()
+    message = graphene.String()
+    updated_products = graphene.List(ProductType)
+
+    def mutate(self, info):
+        low_stock_products = Product.objects.filter(stock__lt=10)
+        updated_products = []
+
+        for product in low_stock_products:
+            product.stock += 10  # simulate restock
+            product.save()
+            updated_products.append(product)
+
+        if updated_products:
+            return UpdateLowStockProducts(
+                success=True,
+                message=f"{len(updated_products)} products updated at {timezone.now()}",
+                updated_products=updated_products,
+            )
+        else:
+            return UpdateLowStockProducts(
+                success=False,
+                message="No low-stock products found",
+                updated_products=[],
+            )
+
+# Add to main mutation
+class Mutation(graphene.ObjectType):
+    update_low_stock_products = UpdateLowStockProducts.Field()

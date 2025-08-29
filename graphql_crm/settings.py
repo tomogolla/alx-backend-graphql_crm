@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'django_filters',  
     'crm',
     'django_crontab',
+    'requests',
 ]
 
 MIDDLEWARE = [
@@ -132,5 +133,7 @@ GRAPHENE = {
 
 
 CRONJOBS = [
-    ('*/5 * * * *', 'crm.cron.scheduled_job')  # Runs every 5 minutes
+    ('*/5 * * * *', 'crm.cron.scheduled_job'),  # Runs every 5 minutes
+    ('*/5 * * * *', 'crm.cron.log_crm_heartbeat'),
+    ('0 */12 * * *', 'crm.cron.update_low_stock'),
 ]
