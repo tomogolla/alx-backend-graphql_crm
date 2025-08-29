@@ -5,7 +5,7 @@ from graphene_django.filter import DjangoFilterConnectionField
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 
-from crm.models import Customer, Product, Order
+from crm.models import Product, Order, Customer
 from crm.filters import CustomerFilter, ProductFilter, OrderFilter
 
 class CustomerType(DjangoObjectType):
@@ -15,8 +15,12 @@ class CustomerType(DjangoObjectType):
         interfaces = (graphene.relay.Node,)
         fields = "__all__"
 
-class ProductType(DjangoObjectType):
+class ProductType(graphene.ObjectType):
     class Meta:
+        id = graphene.ID()
+        name = graphene.String()
+        price = graphene.Float()
+        stock = graphene.Int()
         model = Product
         filterset_class = ProductFilter
         interfaces = (graphene.relay.Node,)
